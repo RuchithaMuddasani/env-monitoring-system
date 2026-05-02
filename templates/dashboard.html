@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body {
+        background: #f8fafc;
+    }
+
+    .header h1 {
+        margin: 0;
+    }
+
+    .subtitle {
+        color: #6b7280;
+        margin-bottom: 20px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    }
+
+    .icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        margin-bottom: 10px;
+    }
+
+    .green {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .blue {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .purple {
+        background: #ede9fe;
+        color: #7c3aed;
+    }
+
+    .red {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .cyan {
+        background: #cffafe;
+        color: #0891b2;
+    }
+
+    .yellow {
+        background: #fef9c3;
+        color: #ca8a04;
+    }
+
+    .title {
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    .value {
+        font-size: 26px;
+        font-weight: bold;
+    }
+
+    .sub {
+        font-size: 12px;
+        color: #9ca3af;
+    }
+
+    .badge {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        background: #dcfce7;
+        color: #16a34a;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+    }
+
+    .mini-card {
+        background: #f9fafb;
+        padding: 15px;
+        border-radius: 15px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .bar {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 10px;
+        margin-top: 5px;
+    }
+
+    .bar-fill {
+        height: 6px;
+        border-radius: 10px;
+        background: #10b981;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+    }
+
+    .alert-red {
+        background: #fee2e2;
+    }
+
+    .alert-yellow {
+        background: #fef3c7;
+    }
+
+    .alert-blue {
+        background: #e0f2fe;
+    }
+</style>
+
+<!-- 🔍 SEARCH BAR -->
+<div style="display:flex;justify-content:space-between;margin-bottom:20px;">
+    <h2>🌍 Environmental Dashboard</h2>
+
+    <div>
+        <input id="cityInput" placeholder="Search city..."
+            style="padding:10px;border-radius:8px;border:1px solid #ccc;">
+        <button onclick="searchCity()"
+            style="padding:10px;border-radius:8px;border:none;background:#10b981;color:white;">
+            Search
+        </button>
+    </div>
+</div>
+
+<div class="subtitle">
+    Hybrid cloud monitoring and data processing overview
+</div>
+
+<!-- CARDS -->
+<div class="grid">
+
+    <div class="card">
+        <div class="badge">Live</div>
+        <div class="icon green">🗄</div>
+        <div class="title">DATA SOURCES</div>
+        <div class="value" id="sources">--</div>
+        <div class="sub">Active</div>
+    </div>
+
+    <div class="card">
+        <div class="badge">Live</div>
+        <div class="icon blue">⚙️</div>
+        <div class="title">RUNNING JOBS</div>
+        <div class="value" id="jobs">--</div>
+        <div class="sub">Processing</div>
+    </div>
+
+    <div class="card">
+        <div class="badge">Live</div>
+        <div class="icon purple">📈</div>
+        <div class="title">READINGS</div>
+        <div class="value" id="readings">--</div>
+        <div class="sub">Live data</div>
+    </div>
+
+    <div class="card">
+        <div class="icon red">⚠️</div>
+        <div class="title">CRITICAL ALERTS</div>
+        <div class="value" id="alerts">--</div>
+        <div class="sub">AQI based</div>
+    </div>
+
+    <div class="card">
+        <div class="icon cyan">☁️</div>
+        <div class="title">CLOUD PROCESSING</div>
+        <div class="value" id="cloud">--</div>
+    </div>
+
+    <div class="card">
+        <div class="icon yellow">🖥</div>
+        <div class="title">EDGE PROCESSING</div>
+        <div class="value" id="edge">--</div>
+    </div>
+
+</div>
+
+<!-- GRAPH + ALERT -->
+<div style="display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-top:25px;">
+    <div class="card">
+        <h3>Data Processing Activity</h3>
+        <canvas id="activityChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>Active Alerts</h3>
+        <div id="alertsBox"></div>
+    </div>
+</div>
+
+<!-- INFRA + ENV -->
+<div style="display:grid; grid-template-columns:1.5fr 1fr; gap:20px; margin-top:25px;">
+
+    <div class="card">
+        <h3>Hybrid Infrastructure</h3>
+        <div style="display:flex; justify-content:space-around; margin-top:20px;">
+            <div class="mini-card">🖥 On-Prem</div>
+            <div class="mini-card">⚙️ Edge</div>
+            <div class="mini-card">☁️ AWS</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Environmental Overview</h3>
+
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px;">
+            <div class="mini-card">
+                AQI <b id="env_aqi">--</b>
+                <div class="bar">
+                    <div id="aqi_bar" class="bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="mini-card">
+                Temp <b id="env_temp">--</b>
+                <div class="bar">
+                    <div id="temp_bar" class="bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="mini-card">
+                Humidity <b id="env_hum">--</b>
+                <div class="bar">
+                    <div id="hum_bar" class="bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="mini-card">
+                Status <b id="status_text">--</b>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let chart;
+    let currentCity = "Hyderabad";
+
+    // SAFE FETCH
+    async function safeFetch(url) {
+        try {
+            let r = await fetch(url);
+            return await r.json();
+        } catch (e) {
+            console.error("API Error:", url);
+            return {};
+        }
+    }
+
+    // LOAD DASHBOARD
+    async function loadDashboard() {
+
+        let city = currentCity;
+
+        let [live, stats, cloudData] = await Promise.all([
+            safeFetch(`/api/live-data?city=${city}`),
+            safeFetch(`/api/dashboard-stats`),
+            safeFetch(`/api/cloud-usage`)
+        ]);
+
+        let p = live?.data?.processed_data || {};
+
+        env_aqi.innerText = p.aqi ?? "--";
+        env_temp.innerText = (p.temperature ?? "--") + "°C";
+        env_hum.innerText = (p.humidity ?? "--") + "%";
+
+        aqi_bar.style.width = Math.min(p.aqi || 0, 100) + "%";
+        temp_bar.style.width = Math.min((p.temperature || 0) * 3, 100) + "%";
+        hum_bar.style.width = Math.min(p.humidity || 0, 100) + "%";
+
+        if (p.aqi < 50) status_text.innerText = "Good";
+        else if (p.aqi < 100) status_text.innerText = "Moderate";
+        else status_text.innerText = "Poor";
+
+        sources.innerText = stats.data_sources || 0;
+        jobs.innerText = stats.running_jobs || 0;
+        readings.innerText = stats.readings || 0;
+        alerts.innerText = stats.alerts || 0;
+
+        cloud.innerText = (cloudData.aws || 0) + "% AWS";
+        edge.innerText = (cloudData.edge || 0) + "% Edge";
+
+        if (p.aqi > 150) alertsBox.innerHTML = `<div class="alert alert-red">🚨 High Pollution</div>`;
+        else if (p.aqi > 100) alertsBox.innerHTML = `<div class="alert alert-yellow">⚠️ Moderate Pollution</div>`;
+        else alertsBox.innerHTML = `<div class="alert alert-blue">✅ Air Quality Normal</div>`;
+    }
+
+    // GRAPH
+    async function loadGraph() {
+
+        let history = await safeFetch(`/api/history/${currentCity}`);
+
+        let labels = [], temp = [], aqi = [];
+
+        history.reverse().forEach(d => {
+            labels.push(new Date(d.time).toLocaleTimeString());
+            temp.push(d.temp || 0);
+            aqi.push(d.aqi || 0);
+        });
+
+        let ctx = document.getElementById("activityChart");
+
+        if (chart) chart.destroy();
+
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: "Temp", data: temp },
+                    { label: "AQI", data: aqi }
+                ]
+            }
+        });
+    }
+
+    // SEARCH
+    function searchCity() {
+        let input = document.getElementById("cityInput").value;
+        if (!input) return;
+
+        currentCity = input;
+        loadDashboard();
+        loadGraph();
+    }
+
+    // INIT
+    document.addEventListener("DOMContentLoaded", () => {
+        loadDashboard();
+        loadGraph();
+    });
+
+    // AUTO REFRESH
+    setInterval(() => {
+        loadDashboard();
+        loadGraph();
+    }, 10000);
+
+</script>
+
+{% endblock %}

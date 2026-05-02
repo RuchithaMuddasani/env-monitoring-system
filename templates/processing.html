@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .subtitle {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .btn {
+        background: #059669;
+        color: white;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    /* KPI */
+    .kpi {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .kpi-card {
+        background: white;
+        padding: 15px;
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .kpi-card b {
+        font-size: 20px;
+    }
+
+    /* TABS */
+    .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .tab {
+        padding: 8px 14px;
+        border-radius: 10px;
+        background: #f3f4f6;
+        cursor: pointer;
+    }
+
+    .tab.active {
+        background: white;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* GRID */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    /* CARD */
+    .card {
+        background: white;
+        border-radius: 18px;
+        padding: 18px;
+        border: 1px solid #e5e7eb;
+        transition: 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-3px);
+    }
+
+    .top {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    /* BADGES */
+    .badge {
+        font-size: 12px;
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+
+    .running {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .completed {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .failed {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    /* FOOTER */
+    .footer {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    /* MODAL */
+    .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-box {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        width: 420px;
+    }
+
+    .modal-box input,
+    select,
+    textarea {
+        width: 100%;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .bar {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 10px;
+        margin-top: 6px;
+    }
+
+    .bar-fill {
+        height: 6px;
+        border-radius: 10px;
+        background: #10b981;
+    }
+</style>
+
+<!-- HEADER -->
+<div class="header">
+    <div>
+        <h2>Processing Jobs</h2>
+        <div class="subtitle">
+            Real-time AWS + Hybrid job monitoring
+        </div>
+    </div>
+    <button class="btn" onclick="openModal()">+ New Job</button>
+</div>
+
+<!-- KPI -->
+<div class="kpi">
+    <div class="kpi-card">Total <br><b id="k_total">--</b></div>
+    <div class="kpi-card">Running <br><b id="k_running">--</b></div>
+    <div class="kpi-card">Completed <br><b id="k_completed">--</b></div>
+    <div class="kpi-card">Failed <br><b id="k_failed">--</b></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+    <div class="tab active" onclick="filterJobs('all')">All</div>
+    <div class="tab" onclick="filterJobs('running')">Running</div>
+    <div class="tab" onclick="filterJobs('completed')">Completed</div>
+    <div class="tab" onclick="filterJobs('failed')">Failed</div>
+</div>
+
+<!-- GRID -->
+<div class="grid" id="jobsContainer"></div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+    <div class="modal-box">
+        <h3>Create Job (Optional)</h3>
+
+        <input id="job_name" placeholder="Job Name">
+        <textarea id="job_desc" placeholder="Description"></textarea>
+
+        <select id="job_infra">
+            <option>AWS</option>
+            <option>Edge</option>
+            <option>On-Prem</option>
+        </select>
+
+        <select id="job_type">
+            <option>Real-Time</option>
+            <option>Batch</option>
+            <option>AI</option>
+        </select>
+
+        <div class="modal-actions">
+            <button onclick="closeModal()">Cancel</button>
+            <button class="btn" onclick="createJob()">Create</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    let allJobs = [];
+
+    // LOAD REAL JOBS
+    async function loadJobs() {
+        let res = await fetch("/api/jobs");
+        allJobs = await res.json();
+
+        updateKPIs();
+        renderJobs(allJobs);
+    }
+
+    // KPI
+    function updateKPIs() {
+        k_total.innerText = allJobs.length;
+        k_running.innerText = allJobs.filter(j => j.status === "running").length;
+        k_completed.innerText = allJobs.filter(j => j.status === "completed").length;
+        k_failed.innerText = allJobs.filter(j => j.status === "failed").length;
+    }
+
+    // RENDER
+    function renderJobs(jobs) {
+
+        let c = document.getElementById("jobsContainer");
+        c.innerHTML = "";
+
+        jobs.forEach(j => {
+
+            c.innerHTML += `
+        <div class="card">
+
+            <div class="top">
+                <b>${j.name}</b>
+                <div class="badge ${j.status}">${j.status}</div>
+            </div>
+
+            <div style="color:#6b7280;font-size:13px">
+                ${j.infra} • ${j.type || "Compute"}
+            </div>
+
+            <div style="margin-top:10px;font-size:13px;color:#6b7280">
+    Instance: ${j.instance_id || "-"}
+</div>
+
+<div style="margin-top:8px;font-size:13px;">
+    CPU Usage: <b>${(j.cpu !== undefined && j.cpu !== null) ? j.cpu : 0}%</b>
+</div>
+
+<div class="bar">
+    <div class="bar-fill" style="width:${(j.cpu !== undefined && j.cpu !== null) ? j.cpu : 0}%"></div>
+</div>
+
+            <div class="footer">
+                ${new Date(j.created_at).toLocaleString()}
+            </div>
+
+        </div>`;
+        });
+    }
+
+    // FILTER
+    function filterJobs(status) {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        event.target.classList.add("active");
+
+        if (status === "all") renderJobs(allJobs);
+        else renderJobs(allJobs.filter(j => j.status === status));
+    }
+
+    // CREATE (optional manual job)
+    async function createJob() {
+
+        await fetch("/api/jobs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: job_name.value,
+                infra: job_infra.value,
+                type: job_type.value
+            })
+        });
+
+        closeModal();
+        loadJobs();
+    }
+
+    // MODAL
+    function openModal() { modal.style.display = "flex"; }
+    function closeModal() { modal.style.display = "none"; }
+
+    // INIT
+    loadJobs();
+    setInterval(loadJobs, 5000);
+
+</script>
+
+{% endblock %}

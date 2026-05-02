@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 15px;
+    }
+
+    input {
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+
+    button {
+        padding: 10px;
+        border-radius: 8px;
+        border: none;
+        background: #22c55e;
+        color: white;
+        cursor: pointer;
+    }
+
+    #map {
+        height: 500px;
+        border-radius: 15px;
+    }
+
+    .legend {
+        margin-top: 10px;
+        font-size: 14px;
+    }
+</style>
+
+<!-- HEADER -->
+<div class="top-bar">
+    <h2>🗺 Pollution Map</h2>
+
+    <div>
+        <input type="text" id="city" placeholder="Enter city">
+        <button onclick="loadMap()">Search</button>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<div class="legend">
+    🟢 Good | 🟡 Moderate | 🔴 Poor
+</div>
+
+<script>
+
+    let map = L.map('map').setView([20, 78], 4);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let markers = [];
+
+    // AQI COLOR FUNCTION
+    function getColor(aqi) {
+        if (aqi <= 50) return "green";
+        if (aqi <= 100) return "yellow";
+        return "red";
+    }
+
+    // LOAD SINGLE CITY
+    async function loadMap() {
+
+        let city = document.getElementById("city").value || "Hyderabad";
+
+        let res = await fetch(`/api/live-data?city=${city}`);
+        let data = await res.json();
+
+        let raw = data.data.raw_data;
+        let p = data.data.processed_data;
+
+        let lat = raw.weather.lat;
+        let lon = raw.weather.lon;
+
+        let color = getColor(p.aqi);
+
+        // CLEAR OLD MARKERS
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        let marker = L.circleMarker([lat, lon], {
+            radius: 10,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.7
+        }).addTo(map);
+
+        marker.bindPopup(`
+        <b>${city}</b><br>
+        AQI: ${p.aqi}<br>
+        Temp: ${p.temperature} °C<br>
+        Humidity: ${p.humidity}%
+    `).openPopup();
+
+        markers.push(marker);
+
+        map.setView([lat, lon], 10);
+    }
+
+
+    // MULTI CITY (ADVANCED 🔥)
+    async function loadMultiple() {
+
+        let cities = ["Delhi", "Mumbai", "Hyderabad", "Chennai"];
+
+        let res = await fetch("/api/multi-city", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cities: cities })
+        });
+
+        let data = await res.json();
+
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        data.data.forEach(cityData => {
+
+            let lat = cityData.lat;
+            let lon = cityData.lon;
+            let aqi = cityData.processed_data.aqi;
+
+            let color = getColor(aqi);
+
+            let marker = L.circleMarker([lat, lon], {
+                radius: 10,
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.7
+            }).addTo(map);
+
+            marker.bindPopup(`
+            <b>${cityData.city}</b><br>
+            AQI: ${aqi}
+        `);
+
+            markers.push(marker);
+        });
+
+        map.setView([20, 78], 4);
+    }
+
+    // AUTO LOAD MULTI CITY
+    loadMultiple();
+
+</script>
+
+{% endblock %}

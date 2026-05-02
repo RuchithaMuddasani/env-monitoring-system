@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .grid {
+        display: grid;
+        gap: 15px;
+    }
+
+    .card {
+        background: white;
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .low {
+        border-left: 5px solid green;
+    }
+
+    .medium {
+        border-left: 5px solid orange;
+    }
+
+    .high {
+        border-left: 5px solid red;
+    }
+
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    input {
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+
+    button {
+        padding: 10px;
+        border-radius: 8px;
+        border: none;
+        background: #22c55e;
+        color: white;
+        cursor: pointer;
+    }
+
+    .badge {
+        font-size: 12px;
+        padding: 5px 10px;
+        border-radius: 20px;
+        color: white;
+    }
+
+    .badge.low {
+        background: green;
+    }
+
+    .badge.medium {
+        background: orange;
+    }
+
+    .badge.high {
+        background: red;
+    }
+</style>
+
+<!-- HEADER -->
+<div class="top-bar">
+    <h2>🚨 Alerts & Notifications</h2>
+
+    <div>
+        <input type="text" id="city" placeholder="Enter city">
+        <button onclick="loadAlerts()">Check</button>
+    </div>
+</div>
+
+<!-- ALERT LIST -->
+<div id="alerts" class="grid"></div>
+
+<script>
+
+    // DETERMINE SEVERITY
+    function getSeverity(aqi) {
+        if (aqi <= 50) return "low";
+        if (aqi <= 150) return "medium";
+        return "high";
+    }
+
+    // GENERATE MESSAGE
+    function getMessage(aqi) {
+        if (aqi <= 50) return "Air quality is good.";
+        if (aqi <= 150) return "Moderate pollution. Sensitive groups be careful.";
+        return "⚠️ High pollution! Avoid outdoor activities.";
+    }
+
+    // LOAD ALERTS
+    async function loadAlerts() {
+
+        let city = document.getElementById("city").value || "Hyderabad";
+
+        let res = await fetch(`/api/history/${city}`);
+        let data = await res.json();
+
+        let container = document.getElementById("alerts");
+        container.innerHTML = "";
+
+        if (data.length === 0) {
+            container.innerHTML = "<p>No alerts available</p>";
+            return;
+        }
+
+        data.forEach(d => {
+
+            let severity = getSeverity(d.aqi);
+            let message = getMessage(d.aqi);
+
+            let div = document.createElement("div");
+            div.className = "card " + severity;
+
+            div.innerHTML = `
+            <b>${city}</b> 
+            <span class="badge ${severity}">${severity.toUpperCase()}</span>
+            <br><br>
+            AQI: ${d.aqi}
+            <br>
+            ${message}
+            <br><br>
+            <small>${d.time}</small>
+        `;
+
+            container.appendChild(div);
+        });
+    }
+
+    // AUTO LOAD
+    loadAlerts();
+
+</script>
+
+{% endblock %}

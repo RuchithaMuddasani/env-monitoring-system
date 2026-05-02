@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>EcoCloud</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 260px;
+            background: white;
+            height: 100vh;
+            padding: 20px;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* LOGO */
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .logo span {
+            font-size: 12px;
+            color: gray;
+            display: block;
+        }
+
+        /* SYSTEM STATUS */
+        .status-box {
+            background: #ecfdf5;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .status-box small {
+            color: gray;
+        }
+
+        .tags {
+            margin-top: 10px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        /* NAV */
+        .nav {
+            margin-top: 20px;
+        }
+
+        .nav a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #374151;
+            transition: 0.2s;
+        }
+
+        .nav a:hover {
+            background: #22c55e;
+            color: white;
+        }
+
+        .active {
+            background: #16a34a !important;
+            color: white !important;
+        }
+
+        /* FOOTER */
+        .footer {
+            margin-top: auto;
+            font-size: 13px;
+            color: gray;
+        }
+
+        /* MAIN */
+        .main {
+            flex: 1;
+            padding: 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+        <!-- LOGO -->
+        <div class="logo">
+            🌿 EcoCloud
+            <span>HYBRID PLATFORM</span>
+        </div>
+
+        <!-- SYSTEM STATUS -->
+        <div class="status-box">
+            <b>System Status</b><br>
+            <small>All nodes operational</small>
+
+            <div class="tags">
+                <span class="tag">On-Prem ✓</span>
+                <span class="tag">AWS ✓</span>
+                <span class="tag">Edge ✓</span>
+            </div>
+        </div>
+
+        <!-- NAVIGATION -->
+        <div class="nav">
+            <a href="/dashboard">📊 Dashboard</a>
+            <a href="/data-sources">📡 Data Sources</a>
+            <a href="/processing">⚙️ Processing</a>
+            <a href="/analytics">📈 Analytics</a>
+            <a href="/map">🗺 Map View</a>
+            <a href="/alerts">🚨 Alerts</a>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            ● Hybrid Cloud Connected
+        </div>
+
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+        {% block content %}{% endblock %}
+    </div>
+
+</body>
+
+</html>

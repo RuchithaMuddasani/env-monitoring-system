@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    .header {
+        margin-bottom: 20px;
+    }
+
+    .subtitle {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    .card {
+        background: white;
+        border-radius: 18px;
+        padding: 20px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .small-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .mini {
+        background: #f9fafb;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .bar {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 10px;
+        margin-top: 5px;
+    }
+
+    .fill {
+        height: 6px;
+        border-radius: 10px;
+        background: #10b981;
+    }
+</style>
+
+<!-- HEADER + SEARCH -->
+<div class="header" style="display:flex;justify-content:space-between;">
+    <div>
+        <h2>Analytics</h2>
+        <div class="subtitle">
+            Environmental data insights and infrastructure analytics
+        </div>
+    </div>
+
+    <div>
+        <input id="cityInput" placeholder="Search city..." style="padding:8px;border-radius:6px;border:1px solid #ccc;">
+        <button onclick="searchCity()"
+            style="padding:8px;border:none;background:#10b981;color:white;border-radius:6px;">
+            Search
+        </button>
+    </div>
+</div>
+
+<div class="grid">
+
+    <div class="card">
+        <h4>Data Source Types</h4>
+        <canvas id="pieChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h4>Infrastructure Usage</h4>
+        <canvas id="infraChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h4>Cost by Infrastructure ($)</h4>
+        <canvas id="costChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h4>Environmental Overview</h4>
+
+        <div class="small-grid">
+            <div class="mini">
+                AQI <b id="aqi">--</b>
+                <div class="bar">
+                    <div id="aqi_bar" class="fill"></div>
+                </div>
+            </div>
+
+            <div class="mini">
+                Temp <b id="temp">--</b>
+                <div class="bar">
+                    <div id="temp_bar" class="fill"></div>
+                </div>
+            </div>
+
+            <div class="mini">PM2.5 <b id="pm25">--</b></div>
+            <div class="mini">PM10 <b id="pm10">--</b></div>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    let pieChart, infraChart, costChart;
+    let currentCity = "Hyderabad";
+
+    // SAFE FETCH
+    async function safeFetch(url) {
+        try {
+            let r = await fetch(url);
+            return await r.json();
+        } catch {
+            return {};
+        }
+    }
+
+    // MAIN FUNCTION
+    async function loadAnalytics() {
+
+        let city = currentCity;
+
+        // 🚀 PARALLEL CALLS (FAST)
+        let [live, jobs] = await Promise.all([
+            safeFetch(`/api/live-data?city=${city}`),
+            safeFetch("/api/jobs")
+        ]);
+
+        let raw = live?.data?.raw_data || {};
+        let p = live?.data?.processed_data || {};
+
+        // ENV
+        aqi.innerText = p.aqi ?? "--";
+        temp.innerText = (p.temperature ?? "--") + "°C";
+        pm25.innerText = raw.air_quality?.pm25 ?? "--";
+        pm10.innerText = raw.air_quality?.pm10 ?? "--";
+
+        aqi_bar.style.width = Math.min(p.aqi || 0, 100) + "%";
+        temp_bar.style.width = Math.min((p.temperature || 0) * 3, 100) + "%";
+
+        // PIE CHART
+        if (pieChart) pieChart.destroy();
+        pieChart = new Chart(pieChartCtx = document.getElementById("pieChart"), {
+            type: 'doughnut',
+            data: {
+                labels: ['AQI', 'PM2.5', 'PM10', 'CO', 'NO2', 'O3'],
+                datasets: [{
+                    data: [
+                        p.aqi || 0,
+                        raw.air_quality?.pm25 || 0,
+                        raw.air_quality?.pm10 || 0,
+                        raw.air_quality?.co || 0,
+                        raw.air_quality?.no2 || 0,
+                        raw.air_quality?.o3 || 0
+                    ]
+                }]
+            }
+        });
+
+        // INFRA
+        let aws = 0, edge = 0, onprem = 0;
+
+        jobs.forEach(j => {
+            if (j.infra === "AWS") aws++;
+            if (j.infra === "Edge") edge++;
+            if (j.infra === "On-Prem") onprem++;
+        });
+
+        if (infraChart) infraChart.destroy();
+        infraChart = new Chart(document.getElementById("infraChart"), {
+            type: 'bar',
+            data: {
+                labels: ['AWS', 'Edge', 'On-Prem'],
+                datasets: [{ data: [aws, edge, onprem] }]
+            }
+        });
+
+        // COST (SIMULATED REALISTIC)
+        let costAWS = aws * 0.01;
+        let costEdge = edge * 0.005;
+        let costOnPrem = onprem * 0.002;
+
+        if (costChart) costChart.destroy();
+        costChart = new Chart(document.getElementById("costChart"), {
+            type: 'bar',
+            data: {
+                labels: ['AWS', 'Edge', 'On-Prem'],
+                datasets: [{ data: [costAWS, costEdge, costOnPrem] }]
+            }
+        });
+    }
+
+    // SEARCH
+    function searchCity() {
+        let val = document.getElementById("cityInput").value;
+        if (!val) return;
+
+        currentCity = val;
+        loadAnalytics();
+    }
+
+    // INIT
+    loadAnalytics();
+    setInterval(loadAnalytics, 10000);
+
+</script>
+
+{% endblock %}
